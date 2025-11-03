@@ -192,27 +192,32 @@ public:
             }
             
             // Process frozen submissions
+            int frozenWrongCount = 0;
             bool problemSolved = false;
-            for (const auto& sub : targetTeam->submissions) {
-                if (sub.problem == targetProblem && sub.isFrozen && !targetTeam->problems[targetProblem].solved) {
-                    if (sub.status == "Accepted") {
-                        targetTeam->problems[targetProblem].solved = true;
-                        targetTeam->problems[targetProblem].solveTime = sub.time;
-                        targetTeam->problems[targetProblem].wrongAttempts = targetTeam->problems[targetProblem].wrongBeforeFreeze;
-                        targetTeam->solvedCount++;
-                        targetTeam->penaltyTime += 20 * targetTeam->problems[targetProblem].wrongBeforeFreeze + sub.time;
-                        targetTeam->solveTimes.push_back(sub.time);
-                        sort(targetTeam->solveTimes.rbegin(), targetTeam->solveTimes.rend());
-                        problemSolved = true;
-                        break;
-                    } else {
-                        targetTeam->problems[targetProblem].wrongBeforeFreeze++;
+            bool wasSolved = targetTeam->problems[targetProblem].solved;
+
+            if (!wasSolved) {
+                for (const auto& sub : targetTeam->submissions) {
+                    if (sub.problem == targetProblem && sub.isFrozen) {
+                        if (sub.status == "Accepted") {
+                            targetTeam->problems[targetProblem].solved = true;
+                            targetTeam->problems[targetProblem].solveTime = sub.time;
+                            targetTeam->problems[targetProblem].wrongAttempts = targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount;
+                            targetTeam->solvedCount++;
+                            targetTeam->penaltyTime += 20 * (targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount) + sub.time;
+                            targetTeam->solveTimes.push_back(sub.time);
+                            sort(targetTeam->solveTimes.rbegin(), targetTeam->solveTimes.rend());
+                            problemSolved = true;
+                            break;
+                        } else {
+                            frozenWrongCount++;
+                        }
                     }
                 }
             }
             // Update wrongAttempts to include frozen wrong attempts (only if not solved)
             if (!problemSolved) {
-                targetTeam->problems[targetProblem].wrongAttempts = targetTeam->problems[targetProblem].wrongBeforeFreeze;
+                targetTeam->problems[targetProblem].wrongAttempts = targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount;
             }
             targetTeam->problems[targetProblem].frozenSubmissions = 0;
             
