@@ -75,12 +75,12 @@ bool compareTeams(Team* a, Team* b) {
     }
     // Only compare solve times if both teams have the same solved count and penalty
     if (a->solvedCount > 0) {
-        // Sort solve times if needed
-        if (!a->solveTimesSorted) {
+        // Ensure solve times are sorted
+        if (!a->solveTimesSorted && a->solveTimes.size() > 0) {
             sort(a->solveTimes.rbegin(), a->solveTimes.rend());
             a->solveTimesSorted = true;
         }
-        if (!b->solveTimesSorted) {
+        if (!b->solveTimesSorted && b->solveTimes.size() > 0) {
             sort(b->solveTimes.rbegin(), b->solveTimes.rend());
             b->solveTimesSorted = true;
         }
