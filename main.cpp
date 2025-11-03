@@ -22,8 +22,9 @@ struct ProblemStatus {
     int solveTime;
     int frozenSubmissions;
     int wrongBeforeFreeze;
-    
-    ProblemStatus() : solved(false), wrongAttempts(0), solveTime(0), 
+    vector<Submission> frozenSubs;
+
+    ProblemStatus() : solved(false), wrongAttempts(0), solveTime(0),
                       frozenSubmissions(0), wrongBeforeFreeze(0) {}
 };
 
@@ -48,7 +49,6 @@ struct Team {
                     solvedCount++;
                     penaltyTime += 20 * problems[problem].wrongAttempts + time;
                     solveTimes.push_back(time);
-                    sort(solveTimes.rbegin(), solveTimes.rend());
                 }
             } else {
                 if (!frozen) {
@@ -59,16 +59,24 @@ struct Team {
 
         if (frozen && !problems[problem].solved) {
             problems[problem].frozenSubmissions++;
+            problems[problem].frozenSubs.push_back(Submission(problem, status, time, frozen));
         }
     }
 };
 
-bool compareTeams(const Team* a, const Team* b) {
+bool compareTeams(Team* a, Team* b) {
     if (a->solvedCount != b->solvedCount) {
         return a->solvedCount > b->solvedCount;
     }
     if (a->penaltyTime != b->penaltyTime) {
         return a->penaltyTime < b->penaltyTime;
+    }
+    // Sort solve times if needed
+    if (!is_sorted(a->solveTimes.rbegin(), a->solveTimes.rend())) {
+        sort(a->solveTimes.rbegin(), a->solveTimes.rend());
+    }
+    if (!is_sorted(b->solveTimes.rbegin(), b->solveTimes.rend())) {
+        sort(b->solveTimes.rbegin(), b->solveTimes.rend());
     }
     int minSize = min(a->solveTimes.size(), b->solveTimes.size());
     for (int i = 0; i < minSize; i++) {
@@ -197,21 +205,18 @@ public:
             bool wasSolved = targetTeam->problems[targetProblem].solved;
 
             if (!wasSolved) {
-                for (const auto& sub : targetTeam->submissions) {
-                    if (sub.problem == targetProblem && sub.isFrozen) {
-                        if (sub.status == "Accepted") {
-                            targetTeam->problems[targetProblem].solved = true;
-                            targetTeam->problems[targetProblem].solveTime = sub.time;
-                            targetTeam->problems[targetProblem].wrongAttempts = targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount;
-                            targetTeam->solvedCount++;
-                            targetTeam->penaltyTime += 20 * (targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount) + sub.time;
-                            targetTeam->solveTimes.push_back(sub.time);
-                            sort(targetTeam->solveTimes.rbegin(), targetTeam->solveTimes.rend());
-                            problemSolved = true;
-                            break;
-                        } else {
-                            frozenWrongCount++;
-                        }
+                for (const auto& sub : targetTeam->problems[targetProblem].frozenSubs) {
+                    if (sub.status == "Accepted") {
+                        targetTeam->problems[targetProblem].solved = true;
+                        targetTeam->problems[targetProblem].solveTime = sub.time;
+                        targetTeam->problems[targetProblem].wrongAttempts = targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount;
+                        targetTeam->solvedCount++;
+                        targetTeam->penaltyTime += 20 * (targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount) + sub.time;
+                        targetTeam->solveTimes.push_back(sub.time);
+                        problemSolved = true;
+                        break;
+                    } else {
+                        frozenWrongCount++;
                     }
                 }
             }
@@ -220,6 +225,7 @@ public:
                 targetTeam->problems[targetProblem].wrongAttempts = targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount;
             }
             targetTeam->problems[targetProblem].frozenSubmissions = 0;
+            targetTeam->problems[targetProblem].frozenSubs.clear();
             
             // Re-sort and check if ranking changed
             sort(teamList.begin(), teamList.end(), compareTeams);
