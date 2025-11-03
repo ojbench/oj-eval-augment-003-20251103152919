@@ -73,19 +73,22 @@ bool compareTeams(Team* a, Team* b) {
     if (a->penaltyTime != b->penaltyTime) {
         return a->penaltyTime < b->penaltyTime;
     }
-    // Sort solve times if needed
-    if (!a->solveTimesSorted) {
-        sort(a->solveTimes.rbegin(), a->solveTimes.rend());
-        a->solveTimesSorted = true;
-    }
-    if (!b->solveTimesSorted) {
-        sort(b->solveTimes.rbegin(), b->solveTimes.rend());
-        b->solveTimesSorted = true;
-    }
-    int minSize = min(a->solveTimes.size(), b->solveTimes.size());
-    for (int i = 0; i < minSize; i++) {
-        if (a->solveTimes[i] != b->solveTimes[i]) {
-            return a->solveTimes[i] < b->solveTimes[i];
+    // Only compare solve times if both teams have the same solved count and penalty
+    if (a->solvedCount > 0) {
+        // Sort solve times if needed
+        if (!a->solveTimesSorted) {
+            sort(a->solveTimes.rbegin(), a->solveTimes.rend());
+            a->solveTimesSorted = true;
+        }
+        if (!b->solveTimesSorted) {
+            sort(b->solveTimes.rbegin(), b->solveTimes.rend());
+            b->solveTimesSorted = true;
+        }
+        int minSize = min(a->solveTimes.size(), b->solveTimes.size());
+        for (int i = 0; i < minSize; i++) {
+            if (a->solveTimes[i] != b->solveTimes[i]) {
+                return a->solveTimes[i] < b->solveTimes[i];
+            }
         }
     }
     return a->name < b->name;
@@ -144,7 +147,7 @@ public:
     
     void flush() {
         flushed = true;
-        sort(teamList.begin(), teamList.end(), compareTeams);
+        stable_sort(teamList.begin(), teamList.end(), compareTeams);
         cout << "[Info]Flush scoreboard.\n";
     }
     
@@ -171,7 +174,14 @@ public:
         }
 
         cout << "[Info]Scroll scoreboard.\n";
-        sort(teamList.begin(), teamList.end(), compareTeams);
+        // Pre-sort all solve times to avoid sorting during comparison
+        for (auto& team : teamList) {
+            if (!team->solveTimesSorted && team->solveTimes.size() > 0) {
+                sort(team->solveTimes.rbegin(), team->solveTimes.rend());
+                team->solveTimesSorted = true;
+            }
+        }
+        stable_sort(teamList.begin(), teamList.end(), compareTeams);
         printScoreboard();
         
         // Unfreeze problems one by one
@@ -233,7 +243,7 @@ public:
             targetTeam->problems[targetProblem].frozenSubs.clear();
             
             // Re-sort and check if ranking changed
-            sort(teamList.begin(), teamList.end(), compareTeams);
+            stable_sort(teamList.begin(), teamList.end(), compareTeams);
             
             int newRank = -1;
             for (int i = 0; i < teamList.size(); i++) {
