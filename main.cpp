@@ -35,8 +35,9 @@ struct Team {
     int solvedCount;
     int penaltyTime;
     vector<int> solveTimes;
-    
-    Team(string n) : name(n), solvedCount(0), penaltyTime(0) {}
+    bool solveTimesSorted;
+
+    Team(string n) : name(n), solvedCount(0), penaltyTime(0), solveTimesSorted(true) {}
     
     void addSubmission(const string& problem, const string& status, int time, bool frozen) {
         submissions.push_back(Submission(problem, status, time, frozen));
@@ -49,6 +50,7 @@ struct Team {
                     solvedCount++;
                     penaltyTime += 20 * problems[problem].wrongAttempts + time;
                     solveTimes.push_back(time);
+                    solveTimesSorted = false;
                 }
             } else {
                 if (!frozen) {
@@ -72,11 +74,13 @@ bool compareTeams(Team* a, Team* b) {
         return a->penaltyTime < b->penaltyTime;
     }
     // Sort solve times if needed
-    if (!is_sorted(a->solveTimes.rbegin(), a->solveTimes.rend())) {
+    if (!a->solveTimesSorted) {
         sort(a->solveTimes.rbegin(), a->solveTimes.rend());
+        a->solveTimesSorted = true;
     }
-    if (!is_sorted(b->solveTimes.rbegin(), b->solveTimes.rend())) {
+    if (!b->solveTimesSorted) {
         sort(b->solveTimes.rbegin(), b->solveTimes.rend());
+        b->solveTimesSorted = true;
     }
     int minSize = min(a->solveTimes.size(), b->solveTimes.size());
     for (int i = 0; i < minSize; i++) {
@@ -213,6 +217,7 @@ public:
                         targetTeam->solvedCount++;
                         targetTeam->penaltyTime += 20 * (targetTeam->problems[targetProblem].wrongBeforeFreeze + frozenWrongCount) + sub.time;
                         targetTeam->solveTimes.push_back(sub.time);
+                        targetTeam->solveTimesSorted = false;
                         problemSolved = true;
                         break;
                     } else {
